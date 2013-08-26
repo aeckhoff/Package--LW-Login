@@ -1,0 +1,13 @@
+<div>
+    <div>
+        <p>Bitte geben Sie die registrierte Email-Adresse ein. Sie erhalten einen Link mit dem Sie sich ein neues Passwort geben koennen.</p>
+    </div>   
+    <form action="<?php echo $this->actionUrl; ?>" method="post">
+        Email: <input type="text" name="userIdentifier" /><br>
+        <input type="submit" value="abschicken"/>
+    </form>
+
+    <div>
+        <a href="<?php echo $this->loginUrl; ?>">zur&uuml;rck zum Login</a>
+    </div>
+</div>

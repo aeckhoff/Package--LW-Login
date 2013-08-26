@@ -1,0 +1,13 @@
+<div>
+    <?php if ($this->error): ?>
+        <p style="color:darkred;">Keine g&uuml;ltigen Logindaten</p>
+    <?php endif; ?>
+    <form action="<?php echo $this->actionUrl; ?>" method="post">
+        Name: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" name="loginname" /><br>
+        Passwort: <input type="password" name="loginpass" /><br>
+        <input type="submit" value="login"/>
+    </form>
+    <div>
+        <a href="<?php echo $this->pwlostUrl; ?>">Pw lost</a>
+    </div>
+</div>
