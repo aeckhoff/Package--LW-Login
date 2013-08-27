@@ -11,20 +11,29 @@ class EmailNewPwSetView extends \LWmvc\View\View
     public function __construct()
     {
         parent::__construct();
-        $config = \lw_registry::getInstance()->getEntry("config");
-        $this->view = new \lw_view(dirname(__FILE__).'/Templates/EmailNewPwSet.phtml');
     }
 
     public function setParams($params)
     {
         $this->params = $params;
     }
+    
+    public function setLanguage($lang)
+    {
+        $this->lang = $lang;
+    }
 
     public function render()
     {
-        $this->view->loginUrl = \lw_page::getInstance()->getUrl(array("cmd" => "showLogin"));
-        $this->view->loginname = $this->params;
-        return $this->view->render();
+        if($this->lang == "de"){            
+            $view = new \lw_view(dirname(__FILE__) . '/Templates/de/EmailNewPwSet.phtml');
+        }else{
+            $view = new \lw_view(dirname(__FILE__) . '/Templates/en/EmailNewPwSet.phtml');
+        }
+        
+        $view->loginUrl = \lw_page::getInstance()->getUrl(array("cmd" => "showLogin"));
+        $view->loginname = $this->params;
+        return $view->render();
     }
 
 }

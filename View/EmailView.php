@@ -11,7 +11,6 @@ class EmailView extends \LWmvc\View\View
     public function __construct()
     {
         parent::__construct();
-        $this->view = new \lw_view(dirname(__FILE__).'/Templates/Email.phtml');
     }
 
     public function setParams($params)
@@ -19,17 +18,27 @@ class EmailView extends \LWmvc\View\View
         $this->params = $params;
     }
 
+    public function setLanguage($lang)
+    {
+        $this->lang = $lang;        
+    }
+    
     public function render()
     {
+        if($this->lang == "de"){            
+            $view = new \lw_view(dirname(__FILE__).'/Templates/de/Email.phtml');
+        }else{
+            $view = new \lw_view(dirname(__FILE__).'/Templates/en/Email.phtml');
+        }
 
         $urlArray = array();
         foreach ($this->params as $param) {
             $urlArray[$param["loginname"]] = \lw_page::getInstance()->getUrl(array("cmd" => "pwLost", "hash" => urlencode($param["id"] . "_" . $param["hash"])));
         }
 
-        $this->view->array = $urlArray;
+        $view->array = $urlArray;
 
-        return $this->view->render();
+        return $view->render();
     }
 
 }

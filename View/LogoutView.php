@@ -12,13 +12,28 @@ class LogoutView extends \LWmvc\View\View
     public function __construct()
     {
         parent::__construct();
-        $this->view = new \lw_view(dirname(__FILE__).'/Templates/Logout.phtml');
     }
-
+    
+    public function setLanguage($lang)
+    {
+        $this->lang = $lang;
+    }
+   
+    public function setUseDefaultCss($use)
+    {
+        $this->useDefaultCss = $use;
+    }
     public function render()
     {
-        $this->view->logoutUrl = \lw_page::getInstance()->getUrl(array("cmd" => "Logout"));
-        return $this->view->render();
+        if($this->lang == "de"){
+            $view = new \lw_view(dirname(__FILE__).'/Templates/de/Logout.phtml');
+        }else{
+            $view = new \lw_view(dirname(__FILE__).'/Templates/en/Logout.phtml');
+        }
+        
+        $view->useDefaultCss = $this->useDefaultCss;
+        $view->logoutUrl = \lw_page::getInstance()->getUrl(array("cmd" => "Logout"));
+        return $view->render();
     }
 
 }

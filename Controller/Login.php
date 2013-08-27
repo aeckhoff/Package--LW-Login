@@ -10,6 +10,10 @@ class Login extends \LWmvc\Controller\Controller
     protected $authObject = false;
     protected $LwLoginConnectionObject = false;
     protected $LwLoginTemplateObject;
+    protected $lang = "de";
+    protected $emailNotificationAfterPasswordChange = false;
+    protected $useOnlyPwLost = false;
+    protected $useDefaultCss = true;
 
     public function __construct($cmd, $oid)
     {
@@ -34,6 +38,26 @@ class Login extends \LWmvc\Controller\Controller
     {
         $this->authObject = $object;
     }
+    
+    public function sendEmailNotificationAfterSuccessfullyPasswordChange($send)
+    {
+        $this->emailNotificationAfterPasswordChange = $send;
+    }
+    
+    public function setLanguage($lang)
+    {
+        $this->lang = $lang;
+    }
+    
+    public function setUseOnlyPwLostFunction($use)
+    {
+        $this->useOnlyPwLost = $use;
+    }
+    
+    public function setUseDefaultCss($use)
+    {
+        $this->useDefaultCss = $use;
+    }
 
     public function execute()
     {
@@ -45,7 +69,16 @@ class Login extends \LWmvc\Controller\Controller
             throw new \LwLogin\Model\Exceptions\MissingLwLoginAuthObjectException();
         }
         
-        $method = $this->getCommand() . "Action";
+        $cmd = $this->getCommand();
+        
+        if($this->useOnlyPwLost){
+            $pwLostCommandsArray = array("showPwLost", "pwLostRequest", "pwLostRequestConfirm", "pwLost", "setNewPw");
+            if(!in_array($cmd, $pwLostCommandsArray)){
+                $cmd = "showPwLost";
+            }
+        }
+        
+        $method = $cmd . "Action";
         if (method_exists($this, $method)) {
             return $this->$method();
         }
@@ -59,10 +92,14 @@ class Login extends \LWmvc\Controller\Controller
         if (!$this->authObject->isLoggedIn()) {
             $formView = $this->LwLoginTemplateObject->getViewByName("LoginView");
             $formView->setErrors($error);
+            $formView->setLanguage($this->lang);
+            $formView->setUseDefaultCss($this->useDefaultCss);
             return $this->returnRenderedView($formView);
         }
         else {
             $view = $this->LwLoginTemplateObject->getViewByName("LogoutView");
+            $view->setLanguage($this->lang);
+            $view->setUseDefaultCss($this->useDefaultCss);
             return $this->returnRenderedView($view);
         }
     }
@@ -73,14 +110,13 @@ class Login extends \LWmvc\Controller\Controller
         $loginpass = $this->request->getRaw("loginpass");
 
         $response = $this->LwLoginConnectionObject->CheckLogin($loginname, $loginpass);
-
         if ($response->getParameterByKey('loginOK')) {
             $userData = $response->getDataByKey("userData");
             $this->authObject->login($userData);
             return $response;
         }
 
-        return $this->showLoginAction(true);
+        return $this->showLoginAction($response->getDataByKey("error"));
     }
 
     public function LogoutAction()
@@ -88,6 +124,8 @@ class Login extends \LWmvc\Controller\Controller
         if ($this->authObject->isLoggedIn()) {
             $this->authObject->logout();
             $view = $this->LwLoginTemplateObject->getViewByName("LogoutConfirmedView");
+            $view->setLanguage($this->lang);
+            $view->setUseDefaultCss($this->useDefaultCss);
             return $this->returnRenderedView($view);
         }
         else {
@@ -98,6 +136,9 @@ class Login extends \LWmvc\Controller\Controller
     public function showPwLostAction()
     {
         $pwLostView = $this->LwLoginTemplateObject->getViewByName("PwLostView");
+        $pwLostView->setLanguage($this->lang);
+        $pwLostView->setUseOnlyPwLost($this->useOnlyPwLost);
+        $pwLostView->setUseDefaultCss($this->useDefaultCss);
         return $this->returnRenderedView($pwLostView);
     }
 
@@ -116,13 +157,22 @@ class Login extends \LWmvc\Controller\Controller
                 $params[] = array("loginname" => $acc["loginname"], "id" => $acc["id"], "hash" => $acc["hash"]);
             }
 
-            return $this->sendEmail($accounts[0]["email"], $params);
+            $this->sendEmail($accounts[0]["email"], $params);
         }
 
-        return $this->buildReloadResponse(array("cmd" => "showLogin"));
+        return $this->buildReloadResponse(array("cmd" => "pwLostRequestConfirm"));
+    }
+    
+    public function pwLostRequestConfirmAction()
+    {
+        $view = $this->LwLoginTemplateObject->getViewByName("PwLostMailWasSentView");
+        $view->setLanguage($this->lang);
+        $view->setUseOnlyPwLost($this->useOnlyPwLost);
+        $view->setUseDefaultCss($this->useDefaultCss);
+        return $this->returnRenderedView($view);
     }
 
-    public function pwLostAction()
+    public function pwLostAction($errors = false)
     {
         $userIdHashArray = explode("_", $this->request->getRaw("hash"));
 
@@ -131,10 +181,17 @@ class Login extends \LWmvc\Controller\Controller
         if ($response->getParameterByKey("idAndHashCombination")) {
             $view = $this->LwLoginTemplateObject->getViewByName("SetNewPwView");
             $view->setParams(array("hash" => $this->request->getRaw("hash")));
+            $view->setLanguage($this->lang);
+            $view->setErrors($errors);
+            $view->setUseOnlyPwLost($this->useOnlyPwLost);
+            $view->setUseDefaultCss($this->useDefaultCss);
             return $this->returnRenderedView($view);
         }
 
         $errorView = $this->LwLoginTemplateObject->getViewByName("PwLostErrorView");
+        $errorView->setLanguage($this->lang);
+        $errorView->setUseOnlyPwLost($this->useOnlyPwLost);
+        $errorView->setUseDefaultCss($this->useDefaultCss);
         return $this->returnRenderedView($errorView);
     }
 
@@ -145,13 +202,17 @@ class Login extends \LWmvc\Controller\Controller
         $response = $this->LwLoginConnectionObject->SetNewPassword($userIdHashArray[0], $userIdHashArray[1], $this->request->getPostArray());
 
         if ($response->getParameterByKey("newPwSet")) {
-            return $this->sendEmail($response->getDataByKey("email"), $response->getDataByKey("loginname"), true);
+            if($this->emailNotificationAfterPasswordChange){
+                 $this->sendEmail($response->getDataByKey("email"), $response->getDataByKey("loginname"), true);
+            }
+            $view = $this->LwLoginTemplateObject->getViewByName("NewPwWasSetView");
+            $view->setLanguage($this->lang);
+            $view->setUseOnlyPwLost($this->useOnlyPwLost);
+            $view->setUseDefaultCss($this->useDefaultCss);
+            return $this->returnRenderedView($view);
         }
         else {
-            $view = $this->LwLoginTemplateObject->getViewByName("SetNewPwView");
-            $view->setError($response->getDataByKey("error"));
-            $view->setParams(array("hash" => $this->request->getRaw("hash")));
-            return $this->returnRenderedView($view);
+            return $this->pwLostAction($response->getDataByKey("error"));
         }
     }
 
@@ -162,14 +223,24 @@ class Login extends \LWmvc\Controller\Controller
         if (!$bool) {
             $EmailView = $this->LwLoginTemplateObject->getViewByName("EmailView");
             $EmailView->setParams($params);
+            $EmailView->setLanguage($this->lang);
             $content = $EmailView->render();
-            $subject = "Password Lost";
+            if($this->lang == "de"){
+                $subject = "Passwort verloren";
+            }else{                
+                $subject = "Password Lost";
+            }
         }
         else {
             $EmailView = $this->LwLoginTemplateObject->getViewByName("EmailNewPwSetView");
             $EmailView->setParams($params);
+            $EmailView->setLanguage($this->lang);
             $content = $EmailView->render();
-            $subject = "New Password";
+            if($this->lang == "de"){
+                $subject = "Neues Passwort";
+            }else{                
+                $subject = "New password";
+            }
         }
         
         $mailInformationArray = array(
@@ -179,7 +250,6 @@ class Login extends \LWmvc\Controller\Controller
         );
         
         $mailer->sendMail($mailInformationArray);
-        return $this->buildReloadResponse(array("cmd" => "showLogin"));
     }
 
 }

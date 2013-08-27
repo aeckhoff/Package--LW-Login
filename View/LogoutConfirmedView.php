@@ -12,13 +12,29 @@ class LogoutConfirmedView extends \LWmvc\View\View
     public function __construct()
     {
         parent::__construct();
-        $this->view = new \lw_view(dirname(__FILE__).'/Templates/LogoutConfirmed.phtml');
+    }
+    
+    public function setLanguage($lang)
+    {
+        $this->lang = $lang;
+    }
+        
+    public function setUseDefaultCss($use)
+    {
+        $this->useDefaultCss = $use;
     }
 
     public function render()
     {
-        $this->view->loginUrl = \lw_page::getInstance()->getUrl(array("cmd" => "showLogin"));
-        return $this->view->render();
+        if($this->lang == "de"){
+            $view = new \lw_view(dirname(__FILE__).'/Templates/de/LogoutConfirmed.phtml');
+        }else{
+            $view = new \lw_view(dirname(__FILE__).'/Templates/en/LogoutConfirmed.phtml');
+        }
+        
+        $view->useDefaultCss = $this->useDefaultCss;
+        $view->loginUrl = \lw_page::getInstance()->getUrl(array("cmd" => "showLogin"));
+        return $view->render();
     }
 
 }
